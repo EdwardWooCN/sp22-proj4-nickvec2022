@@ -20,10 +20,17 @@ public enum LockType {
     public static boolean compatible(LockType a, LockType b) {
         if (a == null || b == null) {
             throw new NullPointerException("null lock type");
+        } else if (a == NL || b == NL) {
+            return true;
+        } else if (a == X || b == X) {
+            return false;
+        } else if (a == IS || b == IS) {
+            return true;
+        } else if (a == SIX || b == SIX) {
+            return false;
+        } else {
+            return a == b;
         }
-        // TODO(proj4_part1): implement
-
-        return false;
     }
 
     /**
@@ -52,10 +59,20 @@ public enum LockType {
     public static boolean canBeParentLock(LockType parentLockType, LockType childLockType) {
         if (parentLockType == null || childLockType == null) {
             throw new NullPointerException("null lock type");
+        } else if (childLockType == NL) {
+            return true;
+        } else if (parentLockType == NL || parentLockType == S || parentLockType == X) {
+            return false;
+        } else if (parentLockType == IX) {
+            return true;
+        } else if (childLockType == IS) {
+            return true;
+        } else if (childLockType == SIX) {
+            return false;
+        } else {
+            return parentLockType == SIX && (childLockType == IX || childLockType == X) ||
+                    parentLockType == IS && childLockType == S;
         }
-        // TODO(proj4_part1): implement
-
-        return false;
     }
 
     /**
@@ -67,10 +84,21 @@ public enum LockType {
     public static boolean substitutable(LockType substitute, LockType required) {
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
+        } else if (required == NL) {
+            return true;
+        } else if (substitute == NL) {
+            return false;
+        } else if (substitute == required) {
+            return true;
+        } else if (substitute == IS || substitute == S) {
+            return false;
+        } else if (required == IX || required == SIX || required == X) {
+            return false;
+        } else {
+            return (substitute == IX && required == IS) ||
+                    (substitute == SIX && required == S) ||
+                    (substitute == X && required == S);
         }
-        // TODO(proj4_part1): implement
-
-        return false;
     }
 
     /**
