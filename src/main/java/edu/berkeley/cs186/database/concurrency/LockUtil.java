@@ -40,10 +40,46 @@ public class LockUtil {
         LockContext parentContext = lockContext.parentContext();
         LockType effectiveLockType = lockContext.getEffectiveLockType(transaction);
         LockType explicitLockType = lockContext.getExplicitLockType(transaction);
-
-        // TODO(proj4_part2): implement
-        return;
+        if (LockType.substitutable(effectiveLockType, requestType)) { // if substitutable, no need to update locks!
+            return;
+        } else if (effectiveLockType == LockType.IX && requestType == LockType.S) {
+            lockContext.promote(transaction, LockType.SIX);
+        } else if (effectiveLockType.isIntent()) { // if intent, we should escalate?
+            lockContext.escalate(transaction);
+            lockContext.promote(transaction, requestType);
+        } else {
+            if (requestType == LockType.S && explicitLockType != LockType.IS) {
+                intentAncestors(lockContext, LockType.IS);
+            } else if (requestType == LockType.X && explicitLockType != LockType.IX) {
+                intentAncestors(lockContext, LockType.IX);
+            }
+            if (explicitLockType == LockType.NL) {
+                lockContext.acquire(transaction, requestType);
+            } else if (explicitLockType == LockType.S && requestType == LockType.X) {
+                lockContext.promote(transaction, requestType);
+            } else if (explicitLockType == LockType.IX && requestType == LockType.S) {
+                lockContext.promote(transaction, LockType.SIX);
+            } else {
+                lockContext.escalate(transaction);
+            }
+        }
     }
 
-    // TODO(proj4_part2) add any helper methods you want
+    public static void intentAncestors(LockContext lc, LockType intentType) {
+        if (lc.parent == null) {
+            return;
+        }
+        TransactionContext transaction = TransactionContext.getTransaction();
+        if (lc.parent.getExplicitLockType(transaction) == intentType) {
+            return;
+        }
+        if (transaction == null) return;
+        intentAncestors(lc.parent, intentType);
+        if (lc.parent.getExplicitLockType(transaction) == LockType.NL) {
+            lc.parent.acquire(transaction, intentType);
+        } else if (lc.parent.getExplicitLockType(transaction) != intentType
+                && lc.parent.getExplicitLockType(transaction) != LockType.IX) {
+            lc.parent.promote(transaction, intentType);
+        }
+    }
 }
